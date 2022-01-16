@@ -1,35 +1,40 @@
 package br.com.adotappet.pedidoapi.domain.service;
 
 import br.com.adotappet.pedidoapi.api.dto.PedidoDTO;
+import br.com.adotappet.pedidoapi.core.rabbitmq.PedidoAceitoRabbitMQConfig;
 import br.com.adotappet.pedidoapi.domain.entity.Pedido;
 import br.com.adotappet.pedidoapi.domain.exception.BusinessException;
 import br.com.adotappet.pedidoapi.domain.repository.PedidoRepository;
 import org.modelmapper.ModelMapper;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
+import java.util.Map;
 
 @Service
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final ModelMapper modelMapper;
+    private final RabbitTemplate rabbitTemplate;
 
     @Autowired
-    public PedidoService(PedidoRepository pedidoRepository, ModelMapper modelMapper) {
+    public PedidoService(PedidoRepository pedidoRepository, ModelMapper modelMapper, RabbitTemplate rabbitTemplate) {
         this.pedidoRepository = pedidoRepository;
         this.modelMapper = modelMapper;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
-    public PedidoDTO iniciaPedido(Long usuarioId, Long petId) {
+    public void iniciaPedido(Long usuarioId, Long petId) {
         Pedido pedido = Pedido.builder()
                 .usuarioId(usuarioId)
                 .petId(petId)
                 .status(Pedido.Status.ABERTO)
                 .build();
 
-        return toPedidoDTO(pedidoRepository.save(pedido));
+        pedidoRepository.save(pedido);
     }
 
     private PedidoDTO aprovaRejeitaPedido(Long id, boolean aceito) {
@@ -38,8 +43,13 @@ public class PedidoService {
             throw new BusinessException("Pedido não está em aberto");
         }
         pedido.setStatus(aceito ? Pedido.Status.ACEITO : Pedido.Status.REJEITADO);
-        //TODO postar na fila que a apicore vai ler e alterar a disponibilidade do pet caso aceito
+        sendRabbitMq(id, aceito);
         return toPedidoDTO(pedidoRepository.save(pedido));
+    }
+
+    private void sendRabbitMq(Long id, boolean aceito) {
+        Map<String, Object> actionMap = Map.of("pedido_id", id, "aceito", aceito);
+        rabbitTemplate.convertAndSend(PedidoAceitoRabbitMQConfig.PEDIDO_ACEITO_MESSAGE_QUEUE, actionMap);
     }
 
     public PedidoDTO aprovaPedido(Long id) {
