@@ -1,19 +1,17 @@
 package br.com.adotappet.pedidoapi.api.controller;
 
 import br.com.adotappet.pedidoapi.api.dto.PedidoDTO;
+
 import br.com.adotappet.pedidoapi.domain.service.PedidoService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pedidos")
 public class PedidoController {
     private final PedidoService pedidoService;
 
-    @Autowired
     public PedidoController(PedidoService pedidoService) {
         this.pedidoService = pedidoService;
     }
