@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class PedidoAceitoRabbitMQConfig extends AbstractRabbitMQConfig {
+public class PedidoAceitoRabbitMQConfig {
     public static final String PEDIDO_ACEITO_MESSAGE_QUEUE = "pedido-aceito-message-queue";
 
     @Bean
@@ -16,8 +16,4 @@ public class PedidoAceitoRabbitMQConfig extends AbstractRabbitMQConfig {
         return new Queue(PEDIDO_ACEITO_MESSAGE_QUEUE, false);
     }
 
-    @Bean
-    Binding pedidoAceitoBinding(TopicExchange exchange) {
-        return BindingBuilder.bind(pedidoAceitoQueue()).to(exchange).with(PEDIDO_ACEITO_MESSAGE_QUEUE);
-    }
 }

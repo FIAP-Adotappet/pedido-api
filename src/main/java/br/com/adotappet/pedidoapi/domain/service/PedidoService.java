@@ -43,17 +43,19 @@ public class PedidoService {
             throw new BusinessException("Pedido não está em aberto");
         }
         pedido.setStatus(aceito ? Pedido.Status.ACEITO : Pedido.Status.REJEITADO);
-        sendRabbitMq(id, aceito);
+        sendRabbitMq(id, pedido.getPetId(), aceito);
         return toPedidoDTO(pedidoRepository.save(pedido));
     }
 
-    private void sendRabbitMq(Long id, boolean aceito) {
-        Map<String, Object> actionMap = Map.of("pedido_id", id, "aceito", aceito);
+    private void sendRabbitMq(Long id, Long petId, boolean aprovado) {
+        Map<String, Object> actionMap = Map.of("pedido_id", id, "pet_id", petId, "aprovado", aprovado);
         rabbitTemplate.convertAndSend(PedidoAceitoRabbitMQConfig.PEDIDO_ACEITO_MESSAGE_QUEUE, actionMap);
     }
 
     public PedidoDTO aprovaPedido(Long id) {
-        return aprovaRejeitaPedido(id, true);
+        PedidoDTO pedidoDTO = aprovaRejeitaPedido(id, true);
+        sendRabbitMq(pedidoDTO.getId(), pedidoDTO.getPetId(), true);
+        return pedidoDTO;
     }
 
     public PedidoDTO rejeitaPedido(Long id) {
@@ -81,6 +83,7 @@ public class PedidoService {
             throw new BusinessException("Pedido está rejeitado");
         }
         pedido.setStatus(Pedido.Status.CANCELADO);
+        sendRabbitMq(id, pedido.getPetId(), false);
         return toPedidoDTO(pedidoRepository.save(pedido));
     }
 
